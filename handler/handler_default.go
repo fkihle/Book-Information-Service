@@ -3,6 +3,7 @@ package handler
 import (
 	"assignment-01/constants"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -25,7 +26,7 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	// Write output to client
 	_, err := fmt.Fprintf(w, "%v", output)
 	if err != nil {
-		// Output error
-		http.Error(w, "Error when returning output", http.StatusInternalServerError)
+		log.Println("Error displaying API instructions: ", err)
+		http.Error(w, "Error displaying API instructions", http.StatusInternalServerError)
 	}
 }

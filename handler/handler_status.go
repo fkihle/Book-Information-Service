@@ -28,7 +28,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	for _, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
-			// Print error with API url
+			http.Error(w, "Error making request to :"+url, http.StatusInternalServerError)
 			fmt.Printf("Error making request to %v: %v\n", url, err)
 			return
 		}

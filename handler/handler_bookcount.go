@@ -50,7 +50,8 @@ func BookCountGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 			// Get book data for current language query
 			bookCount, books, err := fetchBooksData(lang)
 			if err != nil {
-				log.Printf("Error fetching books for language %s: %v\n", lang, err)
+				log.Printf("Error in fetchBooksData(): ", err)
+				http.Error(w, "Error fetching books for language "+lang, http.StatusNoContent)
 				return
 			}
 
@@ -69,7 +70,7 @@ func BookCountGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 		// Marshal BooksOutput data into JSON
 		jsonOutputData, err := json.Marshal(booksOutputData)
 		if err != nil {
-			log.Println("Error generating JSON", err)
+			log.Println("Error generating JSON: ", err)
 			return
 		}
 
@@ -83,7 +84,8 @@ func BookCountGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 		// print instruction to client if no language input is found
 		_, err := fmt.Fprint(w, "Please provide a language in the format \"/bookcount?language=en\"\n")
 		if err != nil {
-			http.Error(w, "Error displaying /bookcount", http.StatusInternalServerError)
+			log.Println("Error displaying instruction to client:", err)
+			http.Error(w, "Error displaying instruction", http.StatusInternalServerError)
 			return
 		}
 
@@ -140,7 +142,7 @@ func totalNumofBooks() int {
 	// Make the HTTP GET request to GUTENDEX API mainpage
 	resp, err := http.Get(constants.GUTENDEX_API)
 	if err != nil {
-		log.Println("Error getting total number of books in gutendex", err)
+		log.Println("Error in GET request for: "+constants.GUTENDEX_API, err)
 		return 0
 	}
 	defer resp.Body.Close()
@@ -167,7 +169,7 @@ func fetchPage(url string, ch chan<- []structs.Book, wg *sync.WaitGroup) {
 	// Make the HTTP GET request
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Println("Error fetching page:", err)
+		log.Println("Error in GET request for: "+url, err)
 		ch <- nil // Send nil to indicate failure
 		return
 	}
@@ -203,12 +205,14 @@ func fetchBooksData(language string) (int, []structs.Book, error) {
 	// Make an initial request to get the first page and total book count
 	resp, err := http.Get(url)
 	if err != nil {
+		log.Println("Error in GET request for: "+url, err)
 		return 0, nil, err
 	}
 	defer resp.Body.Close()
 
 	// Decode JSON data from resp.Body into booksData
 	if err := json.NewDecoder(resp.Body).Decode(&booksData); err != nil {
+		log.Println("Error decoding JSON: ", err)
 		return 0, nil, err
 	}
 	// Append the first page of results

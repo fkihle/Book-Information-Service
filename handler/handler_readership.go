@@ -40,12 +40,17 @@ func ReadershipGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 		// Get countries that speak the queried language
 		countryCodes, countryNames, err := language2country(pathSegments[4])
 		if err != nil {
-			log.Println("Error converting language to country using LANGUAGE2COUNTRY_API", err)
+			log.Println("Error in language2country(): ", err)
+			http.Error(w, "Unable to get information about: "+pathSegments[[4]], http.StatusInternalServerError)
 			return
 		}
 
 		// Grab the limit parameter from the query string
-		limitStr := r.URL.Query().Get("limit")
+		limitStr, err := r.URL.Query().Get("limit")
+		if err != nil {
+			log.Println("Unable to parse limit query: ", err)
+			http.Error(w, "\nPlease provide your desired limit in the format \"/readership/no?limit=2\"\n", http.StatusBadRequest)
+		}
 
 		// Convert "limitStr" to an integer if present
 		var limit int
@@ -53,7 +58,8 @@ func ReadershipGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 			limit, err = strconv.Atoi(limitStr)
 			if err != nil {
 				// Handle the error if conversion fails
-				fmt.Fprintf(w, "Invalid limit value: %s", err)
+				log.Println("Error converting limit input to integer: ", err)
+				http.Error(w, "Invalid limit value input.\nPlease provide your limit query in the format \"/readership/no?limit=2\"\n", http.StatusBadRequest)
 				return
 			}
 			// Check for negative values
@@ -74,14 +80,16 @@ func ReadershipGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 			// Get population count
 			countryPopulation, err := fetchCountryPopulation(country)
 			if err != nil {
-				log.Println("Unable to fetch countryData", err)
+				log.Println("Error in fetchCountryPopulation(): ", err)
+				http.Error(w, "Unable to fetch population for: "+country, http.StatusInternalServerError)
 				return
 			}
 
 			// Get Book data for countUniqueAuthors() and get total number of books
 			bookNum, books, err := fetchBooksData(country)
 			if err != nil {
-				log.Println("Error getting book number", err)
+				log.Println("Error in fetchBooksData(): ", err)
+				http.Error(w, "Unable to fetch books data for: "+country, http.StatusInternalServerError)
 				return
 			}
 
@@ -112,7 +120,7 @@ func ReadershipGetRequestHandler(w http.ResponseWriter, r *http.Request) {
 		// Print instruction to client if language segment not present
 		_, err := fmt.Fprint(w, "Please provide a language in the format \"/readership/no\" or \"/readership/no?limit=2\"\n")
 		if err != nil {
-			http.Error(w, "Error displaying /readership", http.StatusInternalServerError)
+			http.Error(w, "Error displaying instructions.", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -132,12 +140,14 @@ func language2country(twoLetterCode string) ([]string, []string, error) {
 	// Get data for current country from LANGUAGE2COUNTRIES API
 	resp, err := http.Get(url)
 	if err != nil {
+		log.Println("Error getting data from LANGUAGE2COUNTRIES API for: "+twoLetterCode, err)
 		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
 	// Decode recieved JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&lang2countryData); err != nil {
+		log.Println("Error decoding JSON: ",err)
 		return nil, nil, err
 	}
 
@@ -163,13 +173,14 @@ func fetchCountryPopulation(country string) (int, error) {
 	// Get data for current country from RESTCOUNTRIES API
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error fetching RESTCOUNTRIES_API", err)
+		log.Println("Error fetching RESTCOUNTRIES_API", err)
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	// Decode recieved JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&singleCountry); err != nil {
-		fmt.Println("Error decoding JSON from RESTCOUNTRIES_API", err)
+		log.Println("Error decoding JSON from RESTCOUNTRIES_API", err)
 	}
 
 	// Extract the 2-letter CCA2 code and population count
