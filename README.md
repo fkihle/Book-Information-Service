@@ -1,7 +1,4 @@
-# Assignment-1
-
-
-# **README for Book Information Service**
+# **Book Information Service**
 
 The Book Information Service is a REST web application in Go that provides the client with information about books available in a given language based on the Gutenberg library (which holds classic books - most of which are now in the public domain - in a wide range of languages). The service further determines the number of potential readers (as the /readership endpoint) presumed to be able to read books in that language.
 
